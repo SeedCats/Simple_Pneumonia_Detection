@@ -1,298 +1,387 @@
 """
-PDF Report Generation Module
-Handles comprehensive PDF report creation with images and analysis
+PDF Report Generation Module - Professional medical report format
 """
 
 import os
+import re
 from datetime import datetime
 from typing import List, Dict, Optional
 from PIL import Image as PILImage
 from fpdf import FPDF
 from fpdf.enums import XPos, YPos
-from config import (
-    IMAGE_SIZE, PDF_DISCLAIMER, TEXT_REPLACEMENTS,
-    TEMP_IMAGE_PATH
-)
+from config import PDF_DISCLAIMER, TEXT_REPLACEMENTS, TEMP_IMAGE_PATH
 
 
 class PneumoniaReportGenerator:
     """Generate comprehensive PDF reports for pneumonia analysis"""
 
+    COLORS = {
+        'primary': (37, 99, 235), 'success': (22, 163, 74), 'danger': (220, 38, 38),
+        'warning': (217, 119, 6), 'text_dark': (30, 41, 59), 'text_light': (100, 116, 139),
+        'bg_light': (248, 250, 252), 'border': (226, 232, 240),
+    }
+
     def __init__(self):
         self.pdf = None
         self.font_family = 'helvetica'
 
-    def generate_report(self,
-                       file_path: str,
-                       image_path: str,
-                       pil_image: PILImage.Image,
-                       prediction: str,
-                       confidence: float,
-                       features: Dict,
-                       grad_cam_path: Optional[str],
-                       conversation_history: List[Dict]) -> tuple:
-        """
-        Generate comprehensive PDF report
-
-        Args:
-            file_path: Output PDF file path
-            image_path: Original X-ray image path
-            pil_image: PIL Image object
-            prediction: Model prediction (Normal/Pneumonia)
-            confidence: Confidence score (0-1)
-            features: Dictionary of image features
-            grad_cam_path: Path to Grad-CAM image (if available)
-            conversation_history: List of conversation messages
-
-        Returns:
-            Tuple of (success: bool, message: str)
-        """
+    def generate_report(self, file_path: str, image_path: str, pil_image: PILImage.Image,
+                       prediction: str, confidence: float, features: Dict,
+                       grad_cam_path: Optional[str], conversation_history: List[Dict]) -> tuple:
+        """Generate comprehensive PDF report"""
         try:
             self.pdf = FPDF()
-            self.pdf.add_page()
             self.pdf.set_auto_page_break(auto=True, margin=15)
-
-            # Determine font
             self._setup_fonts()
 
-            # Clean conversation history
-            cleaned_conversation = self._clean_conversation(conversation_history)
+            insights = self._extract_insights(conversation_history)
 
-            # Add sections
-            self._add_title()
-            self._add_image_information(image_path)
-            self._add_xray_images(pil_image, grad_cam_path)
-            self._add_diagnosis_summary(prediction, confidence)
-            self._add_image_features(features)
-            self._add_consultation_log(cleaned_conversation)
-            self._add_disclaimer()
+            self._add_cover_page(image_path, prediction, confidence)
+            self.pdf.add_page()
+            self._add_images_section(pil_image, grad_cam_path)
+            self._add_features_section(features)
+            self.pdf.add_page()
+            self._add_clinical_interpretation(insights, prediction, confidence)
+            self._add_recommendations_section(insights, prediction)
+            self._add_disclaimer_section()
 
-            # Save PDF
             self.pdf.output(file_path)
-            return True, f"PDF report successfully saved to:\n{file_path}"
-
+            return True, f"PDF report saved to:\n{file_path}"
         except Exception as e:
-            import traceback
-            print(f"PDF generation error details: {traceback.format_exc()}")
-            return False, f"Failed to generate PDF report: {e}"
-
+            return False, f"Failed to generate PDF: {e}"
         finally:
             self._cleanup_temp_files()
 
     def _setup_fonts(self):
-        """Setup fonts - try Unicode fonts first, fall back to basic"""
+        """Setup fonts"""
         try:
             font_dir = "fonts"
-            dejavu_sans_path = os.path.join(font_dir, "DejaVuSans.ttf")
-            dejavu_sans_bold_path = os.path.join(font_dir, "DejaVuSans-Bold.ttf")
-
-            if os.path.exists(dejavu_sans_path) and os.path.exists(dejavu_sans_bold_path):
-                self.pdf.add_font('DejaVu', '', dejavu_sans_path, uni=True)
-                self.pdf.add_font('DejaVu', 'B', dejavu_sans_bold_path, uni=True)
+            if os.path.exists(f"{font_dir}/DejaVuSans.ttf"):
+                self.pdf.add_font('DejaVu', '', f"{font_dir}/DejaVuSans.ttf", uni=True)
+                self.pdf.add_font('DejaVu', 'B', f"{font_dir}/DejaVuSans-Bold.ttf", uni=True)
                 self.font_family = 'DejaVu'
-                print("Using DejaVu Unicode fonts")
-                return
-
-            raise FileNotFoundError("DejaVu fonts not found")
-
         except:
             self.font_family = 'helvetica'
-            print("Using basic Helvetica font with character filtering")
 
-    def _add_title(self):
-        """Add report title and date"""
-        self.pdf.set_font(self.font_family, "B", 16)
-        self.pdf.cell(0, 10, "AI-Assisted Pneumonia X-ray Analysis Report",
-                     new_x=XPos.LMARGIN, new_y=YPos.NEXT, align="C")
+    def _set_color(self, name: str):
+        self.pdf.set_text_color(*self.COLORS.get(name, self.COLORS['text_dark']))
 
+    def _set_fill(self, name: str):
+        self.pdf.set_fill_color(*self.COLORS.get(name, self.COLORS['bg_light']))
+
+    def _set_draw(self, name: str):
+        self.pdf.set_draw_color(*self.COLORS.get(name, self.COLORS['border']))
+
+    def _add_cover_page(self, image_path: str, prediction: str, confidence: float):
+        """Add cover page"""
+        self.pdf.add_page()
+        is_pneumonia = prediction.lower() == "pneumonia"
+
+        # Header
+        self._set_fill('primary')
+        self.pdf.rect(0, 0, 210, 45, 'F')
+        self.pdf.set_text_color(255, 255, 255)
+        self.pdf.set_font(self.font_family, "B", 24)
+        self.pdf.set_xy(0, 12)
+        self.pdf.cell(0, 10, "Pneumonia Detection Report", align="C")
+        self.pdf.set_font(self.font_family, "", 11)
+        self.pdf.set_xy(0, 26)
+        self.pdf.cell(0, 6, "AI-Assisted Chest X-ray Analysis", align="C")
+
+        # Metadata box
+        self._set_fill('bg_light')
+        self._set_draw('border')
+        self.pdf.rect(10, 55, 190, 35, 'DF')
+        self._set_color('text_dark')
+        self.pdf.set_font(self.font_family, "B", 11)
+        self.pdf.set_xy(15, 60)
+        self.pdf.cell(0, 6, "Report Information")
         self.pdf.set_font(self.font_family, "", 10)
-        now = datetime.now()
-        # Format: Day, Month Date, Year at HH:MM:SS AM/PM (e.g., Thursday, November 28, 2025 at 2:30:45 PM)
-        report_date = now.strftime('%A, %B %d, %Y at %I:%M:%S %p')
-        self.pdf.cell(0, 5, f"Date: {report_date}",
-                     new_x=XPos.LMARGIN, new_y=YPos.NEXT, align="C")
-        self.pdf.ln(10)
+        self._set_color('text_light')
+        self.pdf.set_xy(15, 68)
+        self.pdf.cell(60, 5, "Generated:")
+        self._set_color('text_dark')
+        self.pdf.cell(0, 5, datetime.now().strftime('%B %d, %Y at %I:%M %p'))
+        self._set_color('text_light')
+        self.pdf.set_xy(15, 75)
+        self.pdf.cell(60, 5, "Image File:")
+        self._set_color('text_dark')
+        self.pdf.cell(0, 5, os.path.basename(image_path))
 
-    def _add_image_information(self, image_path: str):
-        """Add image file information"""
+        # Diagnosis result
+        self.pdf.set_xy(10, 100)
+        self._set_color('text_dark')
+        self.pdf.set_font(self.font_family, "B", 14)
+        self.pdf.cell(0, 10, "DIAGNOSIS RESULT", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+
+        self._set_fill('danger' if is_pneumonia else 'success')
+        self.pdf.rect(10, 115, 190, 50, 'F')
+        self.pdf.set_text_color(255, 255, 255)
+        self.pdf.set_font(self.font_family, "B", 28)
+        self.pdf.set_xy(10, 125)
+        self.pdf.cell(190, 15, "PNEUMONIA DETECTED" if is_pneumonia else "NORMAL", align="C")
+        self.pdf.set_font(self.font_family, "", 14)
+        self.pdf.set_xy(10, 143)
+        self.pdf.cell(190, 10, f"Confidence: {confidence * 100:.1f}%", align="C")
+
+        # Confidence interpretation
+        self.pdf.set_xy(10, 175)
+        self._set_color('text_dark')
         self.pdf.set_font(self.font_family, "B", 12)
-        self.pdf.cell(0, 8, "1. Image Information",
-                     new_x=XPos.LMARGIN, new_y=YPos.NEXT)
-
+        self.pdf.cell(0, 8, "Confidence Level Interpretation", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
         self.pdf.set_font(self.font_family, "", 10)
-        self.pdf.multi_cell(0, 5, f"Original Image File: {os.path.basename(image_path)}")
-        self.pdf.ln(5)
+        self._set_color('text_light')
+        conf_texts = {0.9: "Very High", 0.75: "High", 0.6: "Moderate"}
+        level = next((t for thresh, t in conf_texts.items() if confidence >= thresh), "Low")
+        self.pdf.multi_cell(190, 5, f"{level} Confidence - {'Clinical verification advised.' if level == 'Low' else 'AI model shows certainty.'}")
 
-    def _add_xray_images(self, pil_image: PILImage.Image, grad_cam_path: Optional[str]):
-        """Add X-ray and Grad-CAM images"""
-        self.pdf.set_font(self.font_family, "B", 12)
-        self.pdf.cell(0, 8, "2. X-ray Images",
-                     new_x=XPos.LMARGIN, new_y=YPos.NEXT)
-
-        # Save original image temporarily
-        temp_original_file = TEMP_IMAGE_PATH
-        pil_image.save(temp_original_file)
-
-        # Image dimensions
-        page_width = self.pdf.w - 2 * self.pdf.l_margin
-        img_width = min(80, page_width - 20)
-        img_height = 60
-
-        # Original Image
+        # Summary box
+        self.pdf.set_xy(10, 200)
+        self._set_fill('bg_light')
+        self._set_draw('border')
+        self.pdf.rect(10, 200, 190, 60, 'DF')
+        self._set_color('text_dark')
+        self.pdf.set_font(self.font_family, "B", 11)
+        self.pdf.set_xy(15, 205)
+        self.pdf.cell(0, 6, "Quick Summary")
         self.pdf.set_font(self.font_family, "", 10)
-        self.pdf.cell(0, 5, "Original X-ray Image:",
-                     new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+        self._set_color('text_light')
+        self.pdf.set_xy(15, 215)
+        summary = ("Patterns consistent with pneumonia detected. Review by healthcare professional recommended."
+                  if is_pneumonia else "Normal lung patterns. No significant abnormalities detected.")
+        self.pdf.multi_cell(180, 5, summary)
 
-        if os.path.exists(temp_original_file):
-            x_original = (self.pdf.w - img_width) / 2
-            self.pdf.image(temp_original_file, x=x_original, y=self.pdf.get_y(),
-                          w=img_width, h=img_height)
-            self.pdf.ln(img_height + 5)
+    def _add_images_section(self, pil_image: PILImage.Image, grad_cam_path: Optional[str]):
+        """Add X-ray images section"""
+        self._add_section_header("1", "X-ray Image Analysis")
+        pil_image.save(TEMP_IMAGE_PATH)
 
-        # Grad-CAM Image (if available)
+        y = self.pdf.get_y() + 5
+        self._set_color('text_dark')
+        self.pdf.set_font(self.font_family, "B", 10)
+
+        self.pdf.set_xy(10, y)
+        self.pdf.cell(85, 6, "Original X-ray", align="C")
+        if os.path.exists(TEMP_IMAGE_PATH):
+            self.pdf.image(TEMP_IMAGE_PATH, x=10, y=y + 8, w=85, h=70)
+
+        self.pdf.set_xy(105, y)
+        self.pdf.cell(85, 6, "AI Focus Areas (Grad-CAM)" if grad_cam_path else "Grad-CAM Not Available", align="C")
         if grad_cam_path and os.path.exists(grad_cam_path):
-            self.pdf.cell(0, 5, "Grad-CAM Heatmap Overlay:",
-                         new_x=XPos.LMARGIN, new_y=YPos.NEXT)
-            x_gradcam = (self.pdf.w - img_width) / 2
-            self.pdf.image(grad_cam_path, x=x_gradcam, y=self.pdf.get_y(),
-                          w=img_width, h=img_height)
-            self.pdf.ln(img_height + 5)
+            self.pdf.image(grad_cam_path, x=105, y=y + 8, w=85, h=70)
 
+        self.pdf.set_xy(10, y + 90)
+        self._set_fill('bg_light')
+        self.pdf.rect(10, self.pdf.get_y(), 190, 25, 'F')
+        self.pdf.set_xy(15, self.pdf.get_y() + 3)
+        self._set_color('text_dark')
+        self.pdf.set_font(self.font_family, "B", 9)
+        self.pdf.cell(0, 5, "About Grad-CAM", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+        self.pdf.set_font(self.font_family, "", 9)
+        self._set_color('text_light')
+        self.pdf.set_x(15)
+        self.pdf.multi_cell(180, 4, "Grad-CAM highlights regions influencing AI's decision. Red/yellow = high importance.")
         self.pdf.ln(10)
 
-    def _add_diagnosis_summary(self, prediction: str, confidence: float):
-        """Add AI diagnosis summary"""
-        self.pdf.set_font(self.font_family, "B", 12)
-        self.pdf.cell(0, 8, "3. AI Diagnosis Summary",
-                     new_x=XPos.LMARGIN, new_y=YPos.NEXT)
-
-        self.pdf.set_font(self.font_family, "", 10)
-        self.pdf.cell(0, 5, f"Predicted Class: {prediction}",
-                     new_x=XPos.LMARGIN, new_y=YPos.NEXT)
-        self.pdf.cell(0, 5, f"Confidence Score: {confidence * 100:.2f}%",
-                     new_x=XPos.LMARGIN, new_y=YPos.NEXT)
-        self.pdf.ln(5)
-
-    def _add_image_features(self, features: Dict):
-        """Add quantitative image features"""
-        self.pdf.set_font(self.font_family, "B", 12)
-        self.pdf.cell(0, 8, "4. Quantitative Image Features",
-                     new_x=XPos.LMARGIN, new_y=YPos.NEXT)
-
-        self.pdf.set_font(self.font_family, "", 10)
-
-        if features:
-            feature_text = f"""Mean Intensity (0-255): {features.get('mean_intensity', 'N/A'):.1f}
-Intensity Standard Deviation: {features.get('std_intensity', 'N/A'):.1f}
-Edge Density (0-1): {features.get('edge_density', 'N/A'):.4f}
-Texture Complexity (Sobel std): {features.get('texture_complexity', 'N/A'):.1f}
-Histogram Entropy: {features.get('histogram_entropy', 'N/A'):.2f}"""
-            self.pdf.multi_cell(0, 5, feature_text)
-        else:
-            self.pdf.multi_cell(0, 5, "No quantitative image analysis data available.")
-
-        self.pdf.ln(5)
-
-    def _add_consultation_log(self, conversation: List[Dict]):
-        """Add AI agent consultation log"""
-        if not conversation:
+    def _add_features_section(self, features: Dict):
+        """Add quantitative features section"""
+        self._add_section_header("2", "Quantitative Image Analysis")
+        if not features:
+            self._set_color('text_light')
+            self.pdf.multi_cell(0, 5, "No analysis data available.")
             return
 
-        self.pdf.set_font(self.font_family, "B", 12)
-        self.pdf.cell(0, 8, "5. AI Agent Consultation Log",
-                     new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+        data = [
+            ("Mean Intensity", f"{features.get('mean_intensity', 0):.1f}", "Average brightness (0-255)"),
+            ("Intensity Std Dev", f"{features.get('std_intensity', 0):.1f}", "Brightness variation"),
+            ("Edge Density", f"{features.get('edge_density', 0):.4f}", "Detected edges (0-1)"),
+            ("Texture Complexity", f"{features.get('texture_complexity', 0):.1f}", "Pattern variation"),
+            ("Histogram Entropy", f"{features.get('histogram_entropy', 0):.2f}", "Information content"),
+        ]
+
+        # Header
+        self._set_fill('primary')
+        self.pdf.set_text_color(255, 255, 255)
+        self.pdf.set_font(self.font_family, "B", 9)
+        self.pdf.cell(65, 12, "  Metric", border=1, fill=True)
+        self.pdf.cell(30, 12, "Value", border=1, fill=True, align="C")
+        self.pdf.cell(95, 12, "Description", border=1, fill=True, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+
+        # Rows
+        for i, (metric, value, desc) in enumerate(data):
+            self.pdf.set_fill_color(248, 250, 252) if i % 2 == 0 else self.pdf.set_fill_color(255, 255, 255)
+            self._set_color('text_dark')
+            self.pdf.set_font(self.font_family, "", 9)
+            self.pdf.cell(65, 12, f"  {metric}", border=1, fill=True)
+            self.pdf.set_font(self.font_family, "B", 9)
+            self.pdf.cell(30, 12, value, border=1, fill=True, align="C")
+            self.pdf.set_font(self.font_family, "", 9)
+            self._set_color('text_light')
+            self.pdf.cell(95, 12, desc, border=1, fill=True, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+        self.pdf.ln(5)
+
+    def _add_clinical_interpretation(self, insights: Dict, prediction: str, confidence: float):
+        """Add clinical interpretation section"""
+        self._add_section_header("3", "Clinical Interpretation")
+        is_pneumonia = prediction.lower() == "pneumonia"
+
+        # Findings
+        self._set_color('text_dark')
+        self.pdf.set_font(self.font_family, "B", 11)
+        self.pdf.cell(0, 8, "Primary Findings", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+        self.pdf.set_font(self.font_family, "", 10)
+        self._set_color('text_light')
+
+        findings = insights.get('findings') or self._get_defaults('findings', is_pneumonia, confidence)
+        for f in findings[:5]:
+            self.pdf.set_x(15)
+            self.pdf.multi_cell(180, 5, f"- {f}")
+        self.pdf.ln(5)
+
+        # Differentials
+        self._set_color('text_dark')
+        self.pdf.set_font(self.font_family, "B", 11)
+        self.pdf.cell(0, 8, "Differential Considerations", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+        self.pdf.set_font(self.font_family, "", 10)
+        self._set_color('text_light')
+
+        diffs = insights.get('differentials') or self._get_defaults('differentials', is_pneumonia)
+        for d in diffs[:4]:
+            self.pdf.set_x(15)
+            self.pdf.multi_cell(180, 5, f"- {d}")
+        self.pdf.ln(5)
+
+        # Limitations box
+        box_y = self.pdf.get_y()
+        self.pdf.set_fill_color(254, 243, 199)
+        self._set_draw('warning')
+        self.pdf.rect(10, box_y, 190, 35, 'DF')
+        self.pdf.set_text_color(217, 119, 6)
+        self.pdf.set_font(self.font_family, "B", 10)
+        self.pdf.set_xy(15, box_y + 5)
+        self.pdf.cell(0, 6, "Important Limitations")
+        self.pdf.set_font(self.font_family, "", 9)
+        self.pdf.set_text_color(146, 64, 14)
+        self.pdf.set_xy(15, box_y + 14)
+        self.pdf.multi_cell(180, 4, "AI analysis should not replace clinical judgment. Patient history and other tests are essential.")
+        self.pdf.set_y(box_y + 40)  # Move past the box
+
+    def _add_recommendations_section(self, insights: Dict, prediction: str):
+        """Add recommendations section"""
+        self._add_section_header("4", "Recommendations")
+        is_pneumonia = prediction.lower() == "pneumonia"
+
+        self._set_color('text_dark')
+        self.pdf.set_font(self.font_family, "B", 11)
+        self.pdf.cell(0, 8, "Suggested Next Steps", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+        self._set_color('text_light')
         self.pdf.set_font(self.font_family, "", 10)
 
-        for i, message in enumerate(conversation):
-            role = message['role'].capitalize()
-            content = message['content']
+        recs = insights.get('recommendations') or self._get_defaults('recommendations', is_pneumonia)
+        for i, rec in enumerate(recs[:6], 1):
+            self.pdf.set_x(15)
+            self.pdf.multi_cell(180, 6, f"{i}. {rec}")
+        self.pdf.ln(5)
 
-            if i > 0:
-                self.pdf.ln(3)
+        # Follow-up
+        self._set_fill('bg_light')
+        self.pdf.rect(10, self.pdf.get_y(), 190, 25, 'F')
+        self._set_color('text_dark')
+        self.pdf.set_font(self.font_family, "B", 10)
+        self.pdf.set_xy(15, self.pdf.get_y() + 3)
+        self.pdf.cell(0, 6, "Follow-up Guidance")
+        self.pdf.set_font(self.font_family, "", 9)
+        self._set_color('text_light')
+        self.pdf.set_xy(15, self.pdf.get_y() + 8)
+        self.pdf.multi_cell(180, 4, "Consult healthcare provider." if is_pneumonia else "Continue routine monitoring.")
 
-            self.pdf.set_font(self.font_family, "B", 10)
-            self.pdf.cell(0, 6, f"[{role}]:",
-                         new_x=XPos.LMARGIN, new_y=YPos.NEXT)
-            self.pdf.set_font(self.font_family, "", 10)
-
-            paragraphs = content.split('\n')
-            for paragraph in paragraphs:
-                if paragraph.strip():
-                    self.pdf.multi_cell(0, 5, paragraph.strip())
-                    self.pdf.ln(1)
-
-    def _add_disclaimer(self):
-        """Add disclaimer footer"""
-        self.pdf.ln(10)
+    def _add_disclaimer_section(self):
+        """Add disclaimer"""
+        self.pdf.ln(15)
+        self._set_draw('border')
+        self.pdf.line(10, self.pdf.get_y(), 200, self.pdf.get_y())
+        self.pdf.ln(5)
+        self._set_color('text_light')
         self.pdf.set_font(self.font_family, "I", 8)
         self.pdf.multi_cell(0, 4, PDF_DISCLAIMER)
 
-    def _clean_conversation(self, conversation: List[Dict]) -> List[Dict]:
-        """Clean conversation text for PDF compatibility"""
-        cleaned = []
-        for message in conversation:
-            cleaned_content = self._clean_text_for_pdf(message['content'])
-            cleaned.append({
-                'role': message['role'],
-                'content': cleaned_content
-            })
-        return cleaned
+    def _add_section_header(self, number: str, title: str):
+        """Add section header"""
+        self._set_color('primary')
+        self.pdf.set_font(self.font_family, "B", 14)
+        self.pdf.cell(0, 10, f"{number}. {title}", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+        self._set_draw('primary')
+        self.pdf.line(10, self.pdf.get_y(), 60, self.pdf.get_y())
+        self.pdf.ln(5)
 
-    def _clean_text_for_pdf(self, text: str, aggressive: bool = False) -> str:
-        """Clean text to remove characters not supported by basic PDF fonts"""
+    def _extract_insights(self, conversation: List[Dict]) -> Dict:
+        """Extract key insights from AI conversation"""
+        insights = {'findings': [], 'differentials': [], 'recommendations': []}
+        if not conversation:
+            return insights
+
+        text = ' '.join(m.get('content', '') for m in conversation if m.get('role') == 'assistant')
         if not text:
-            return ""
+            return insights
 
-        cleaned_text = text
+        text = self._clean_text(text)
+        sentences = re.split(r'(?<=[.!?])\s+', text)
+
+        keywords = {
+            'findings': ['finding', 'shows', 'indicates', 'detected', 'opacity', 'consolidation', 'pattern'],
+            'differentials': ['differential', 'bacterial', 'viral', 'consider', 'rule out'],
+            'recommendations': ['recommend', 'suggest', 'advise', 'should', 'consult', 'monitor']
+        }
+
+        for key, kws in keywords.items():
+            for s in sentences:
+                if 20 < len(s) < 200 and any(kw in s.lower() for kw in kws):
+                    clean = re.sub(r'\[Ref \d+\]|\*+', '', s).strip()
+                    if clean and clean not in insights[key]:
+                        insights[key].append(clean)
+                        if len(insights[key]) >= (5 if key == 'recommendations' else 4):
+                            break
+        return insights
+
+    def _get_defaults(self, category: str, is_pneumonia: bool, confidence: float = 0) -> List[str]:
+        """Get default content"""
+        defaults = {
+            'findings': {
+                True: [f"Patterns consistent with pneumonia ({confidence*100:.1f}% confidence).",
+                       "Potential opacity in lung fields.", "Grad-CAM highlights concern regions."],
+                False: [f"Normal lung patterns ({confidence*100:.1f}% confidence).",
+                        "No significant opacities detected.", "Lung fields appear clear."]
+            },
+            'differentials': {
+                True: ["Bacterial pneumonia", "Viral pneumonia", "Atypical pneumonia", "Pulmonary edema"],
+                False: ["Early-stage infection", "Subclinical conditions", "Image quality factors"]
+            },
+            'recommendations': {
+                True: ["Seek healthcare evaluation", "Correlate with symptoms", "Consider blood work",
+                       "Review patient history", "Monitor oxygen levels"],
+                False: ["Continue health monitoring", "Report new symptoms", "Maintain preventive measures"]
+            }
+        }
+        return defaults.get(category, {}).get(is_pneumonia, [])
+
+    def _clean_text(self, text: str) -> str:
+        """Clean text for PDF"""
         for old, new in TEXT_REPLACEMENTS.items():
-            cleaned_text = cleaned_text.replace(old, new)
-
-        if aggressive or self.font_family == 'helvetica':
-            # For basic fonts, remove any non-ASCII characters
-            cleaned_text = cleaned_text.encode('ascii', 'ignore').decode('ascii')
-
-        return cleaned_text
+            text = text.replace(old, new)
+        return text.encode('ascii', 'ignore').decode('ascii') if self.font_family == 'helvetica' else text
 
     def _cleanup_temp_files(self):
-        """Clean up temporary image files"""
-        temp_files = [TEMP_IMAGE_PATH]
-
-        for file_path in temp_files:
-            try:
-                if os.path.exists(file_path):
-                    os.remove(file_path)
-                    print(f"✓ Cleanup: Deleted {file_path}")
-            except Exception as e:
-                print(f"Cleanup warning: Could not delete {file_path}: {e}")
+        """Clean up temp files"""
+        try:
+            if os.path.exists(TEMP_IMAGE_PATH):
+                os.remove(TEMP_IMAGE_PATH)
+        except:
+            pass
 
 
-def create_pdf_report(file_path: str,
-                     image_path: str,
-                     pil_image: PILImage.Image,
-                     prediction: str,
-                     confidence: float,
-                     features: Dict,
-                     grad_cam_path: Optional[str],
-                     conversation_history: List[Dict]) -> tuple:
-    """
-    Convenience function to create PDF report
-
-    Args:
-        file_path: Output PDF file path
-        image_path: Original X-ray image path
-        pil_image: PIL Image object
-        prediction: Model prediction (Normal/Pneumonia)
-        confidence: Confidence score (0-1)
-        features: Dictionary of image features
-        grad_cam_path: Path to Grad-CAM image (if available)
-        conversation_history: List of conversation messages
-
-    Returns:
-        Tuple of (success: bool, message: str)
-    """
-    generator = PneumoniaReportGenerator()
-    return generator.generate_report(
-        file_path, image_path, pil_image, prediction,
-        confidence, features, grad_cam_path, conversation_history
-    )
-
+def create_pdf_report(file_path: str, image_path: str, pil_image: PILImage.Image,
+                     prediction: str, confidence: float, features: Dict,
+                     grad_cam_path: Optional[str], conversation_history: List[Dict]) -> tuple:
+    """Create PDF report"""
+    return PneumoniaReportGenerator().generate_report(
+        file_path, image_path, pil_image, prediction, confidence, features, grad_cam_path, conversation_history)

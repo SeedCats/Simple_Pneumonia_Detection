@@ -1,82 +1,61 @@
 # Pneumonia Detection AI System
 
-### An AI-powered medical diagnostic tool for detecting pneumonia from chest X-ray images using deep learning, RAG (Retrieval-Augmented Generation), and AI medical consultation features.
+An AI-powered medical diagnostic tool for detecting pneumonia from chest X-ray images using deep learning, RAG, and AI consultation.
 
 ## 📋 Table of Contents
-
 - [Overview](#overview)
 - [Features](#features)
 - [System Architecture](#system-architecture)
 - [Installation](#installation)
 - [Configuration](#configuration)
 - [Usage](#usage)
-- [Technologies & Dependencies](#technologies--dependencies)
+- [Technologies](#technologies)
 - [Model Details](#model-details)
-- [Limitations & Disclaimer](#limitations--disclaimer)
+- [Limitations](#limitations)
 
 ---
 
 ## Overview
 
-The **Pneumonia Detection AI System** is a assistant that combines:
-
-- **Deep Learning Model Classification**: ResNet50-based pneumonia detection from X-ray images
-- **Advanced Visualization**: Grad-CAM heatmap generation for interpretable AI predictions
-- **RAG-Enhanced Knowledge Base**: Integration with medical web resources for evidence-based insights
-- **AI Consultation**: Grok API integration for detailed medical analysis and interpretations
-- **Reporting**: Automated PDF report generation with comprehensive findings
+The **Pneumonia Detection AI System** combines:
+- **Deep Learning Classification**: ResNet50-based pneumonia detection
+- **Grad-CAM Visualization**: Interpretable AI predictions
+- **RAG Knowledge Base**: Medical web resources integration
+- **AI Consultation**: Grok API for detailed analysis
+- **PDF Reporting**: Automated comprehensive reports
 
 ---
 
 ## Features
 
-### 🔍 **Core Detection Capabilities**
-- **Binary Classification**: Normal vs. Pneumonia detection from chest X-rays
-- **High Accuracy**: ResNet50 deep learning model trained on extensive pneumonia datasets
-- **Confidence Scoring**: Quantified prediction confidence (0-100%)
-- **Real-time Analysis**: Detection pneumonia from input X-ray images
+### 🔍 Core Detection
+- Binary classification (Normal/Pneumonia)
+- ResNet50 model with confidence scoring
+- Real-time analysis
 
-### 📊 **Advanced Image Analysis**
-- **Quantified Features**: 
-  - Mean Intensity & Standard Deviation
-  - Edge Density Metrics
-  - Texture Complexity Analysis
-  - Histogram Entropy Computation
-- **Grad-CAM Heatmaps**: Visual attention maps showing which regions drive the diagnosis
-- **Image Preprocessing**: Automatic normalization and standardization
+### 📊 Image Analysis
+- Quantified features (intensity, edge density, texture, entropy)
+- Grad-CAM heatmaps showing diagnostic regions
 
-### 🧠 **RAG-Powered Medical Knowledge**
-- **Web-Based Knowledge Retrieval**: Automated extraction from medical sources:
-  - Mayo clinic
-  - Medlineplus
-  - CDC
-  - Cleveland Clinic
-  - And more
-- **Semantic Search**: Sentence-transformer embeddings for intelligent document retrieval
-- **Context-Aware Responses**: AI consultations enriched with peer-reviewed medical knowledge
+### 🧠 RAG Medical Knowledge
+- Web-based retrieval from Mayo Clinic, CDC, MedlinePlus, Cleveland Clinic
+- Sentence-transformer embeddings with FAISS indexing
+- Context-aware AI responses
 
-### 🤖 **AI Consultation Features**
-- **Grok API Integration**: Advanced medical analysis and interpretation (Grok-4-fast-non-reasoning model)
-- **Multi-turn Conversations**: Ask follow-up questions about findings
-- **Evidence-Based Insights**: Responses backed by retrieved medical knowledge
-- **Differential Diagnosis**: Consideration of alternative diagnoses
+### 🤖 AI Consultation
+- Grok-4 API integration
+- Multi-turn conversations
+- Evidence-based differential diagnoses
 
-### 📄 **PDF Reporting**
-- **PDF Generation**: Comprehensive diagnostic reports with:
-  - AI predictions and confidence scores
-  - Image characteristics analysis
-  - Grad-CAM visualization
-  - Differential diagnoses
-  - Clinical recommendations
-  - Medical citations and references
-  - Disclaimer and validation requirements
+### 📄 PDF Reports
+- Predictions with confidence scores
+- Grad-CAM visualization
+- Clinical recommendations and disclaimers
 
-### 🎨 **Easy Understand GUI**
-- **Intuitive Interface**: TKinter-based desktop application
-- **Image Preview**: Real-time visualization of uploaded X-rays
-- **Heatmap Display**: Interactive Grad-CAM overlay visualization
-- **Scrollable Analysis**: Detailed analysis text with scrolling capability
-- **Report Management**: Direct PDF export functionality
+### 🎨 GUI
+- TKinter desktop application
+- Real-time image preview and heatmap display
+- Direct PDF export
 
 ---
 
@@ -84,53 +63,29 @@ The **Pneumonia Detection AI System** is a assistant that combines:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    Pneumonia Detection System               │
+│                 Pneumonia Detection System                  │
 ├─────────────────────────────────────────────────────────────┤
-│                                                             │
-│  ┌──────────────────┐      ┌──────────────────┐             │
-│  │  GUI Interface   │      │  Image Input     │             │
-│  │  (TKinter)       │─────▶│  (JPEG/PNG)      │             │
-│  └──────────────────┘      └──────────────────┘             │
-│           │                                                 │
-│           ▼                                                 │
-│  ┌─────────────────────────────────────────────────────┐    │
-│  │     Image Preprocessing & Feature Extraction        │    │
-│  │  - Normalization (ImageNet standard)                │    │
-│  │  - Tensor conversion                                │    │
-│  │  - Quantified feature computation                   │    │
-│  └─────────────────────────────────────────────────────┘    │
-│           │                                                 │
-│           ▼                                                 │
-│  ┌──────────────────┐      ┌──────────────────┐             │
-│  │   ResNet50 Model │      │   Classification │             │
-│  │   (2 Classes)    │─────▶│  (Normal/Pneum)  │             │
-│  └──────────────────┘      └──────────────────┘             │
-│           │                                                 │
-│      ┌────┴────┐                                            │
-│      ▼         ▼                                            │
-│  ┌────────┐ ┌──────────────┐      ┌──────────────┐          │
-│  │Grad-CAM│ │RAG Retrieval │─────▶│Medical K.B.  │          │
-│  │Heatmap │ │(SentenceTrans)      │(FAISS Index) │          │
-│  └────────┘ └──────────────┘      └──────────────┘          │
-│      │             │                                        │
-│      └─────┬───────┘                                        │
-│            ▼                                                │
-│  ┌─────────────────────────────────────────────────────┐    │
-│  │         Grok API Consultation                       │    │
-│  │  - Medical interpretation                           │    │
-│  │  - Evidence-based insights                          │    │
-│  │  - Differential diagnoses                           │    │
-│  └─────────────────────────────────────────────────────┘    │
-│            │                                                │
-│            ▼                                                │
-│  ┌─────────────────────────────────────────────────────┐    │
-│  │         PDF Report Generation                       │    │
-│  │  - Comprehensive findings                           │    │
-│  │  - Heatmap visualization                            │    │
-│  │  - Clinical recommendations                         │    │
-│  │  - Medical citations                                │    │
-│  └─────────────────────────────────────────────────────┘    │
-│                                                             │
+│  ┌────────────┐    ┌─────────────┐    ┌─────────────┐       │
+│  │    GUI     │───▶│ Preprocess  │───▶│  ResNet50   │       │
+│  │ (TKinter)  │    │ & Features  │    │ Classifier  │       │
+│  └────────────┘    └─────────────┘    └─────────────┘       │
+│                           │                  │              │
+│                     ┌─────┴─────┐      ┌─────┴─────┐        │
+│                     │  Grad-CAM │      │    RAG    │        │
+│                     │  Heatmap  │      │ Retrieval │        │
+│                     └───────────┘      └───────────┘        │
+│                           │                  │              │
+│                           └────────┬─────────┘              │
+│                                    ▼                        │
+│                          ┌─────────────────┐                │
+│                          │   Grok API      │                │
+│                          │  Consultation   │                │
+│                          └─────────────────┘                │
+│                                    │                        │
+│                                    ▼                        │
+│                          ┌─────────────────┐                │
+│                          │  PDF Report     │                │
+│                          └─────────────────┘                │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -139,76 +94,48 @@ The **Pneumonia Detection AI System** is a assistant that combines:
 ## Installation
 
 ### Prerequisites
-- **Python 3.8+**
-- **CUDA-compatible GPU** (recommended for faster inference, CPU supported)
-- **Windows/Mac/Linux**
+- Python 3.8+
+- CUDA GPU (recommended) or CPU
 
-### Step 1: Clone Repository
+### Setup
 ```bash
+# Clone repository
 git clone https://github.com/SeedCats/Simple_Pneumonia_Detection.git
-```
 
-### Step 2: Install Dependencies
-```bash
+# Install dependencies
 pip install -r requirements.txt
+
+# Create .env file with API key
+echo "XAI_API_KEY=your_grok_api_key" > .env
 ```
 
-Or manually install:
-```bash
-pip install torch torchvision torchaudio
-pip install pillow matplotlib numpy opencv-python
-pip install sentence-transformers
-pip install faiss-cpu
-pip install requests beautifulsoup4
-pip install fpdf2
-pip install python-dotenv
-```
+Get Grok API key from [x.ai Console](https://console.x.ai)
 
-### Step 3: Download Pre-trained Model
-Ensure the following file is in the project directory:
-- `resnet50_pneumonia_classifier.pth` - Pre-trained ResNet50 model weights
-
-### Step 4: Setup API Keys
-Create a `.env` file in the project root:
-```
-XAI_API_KEY=your_grok_api_key_here
-```
-
-Obtain your Grok API key from [x.ai Console](https://console.x.ai)
+Ensure `resnet50_pneumonia_classifier.pth` is in the project directory.
 
 ---
 
 ## Configuration
 
-### Model Configuration
-e.g. Modify the configuration constants in `config.py`:
+Key settings in `config.py`:
 
 ```python
-# Model paths and parameters
+# Model
 MODEL_PATH = 'resnet50_pneumonia_classifier.pth'
-NUM_CLASSES = 2                                    # Normal, Pneumonia
-IMAGE_SIZE = 224                                   # ResNet50 input size
+NUM_CLASSES = 2
+IMAGE_SIZE = 224
 CLASS_NAMES = ['Normal', 'Pneumonia']
 
-# Normalization (ImageNet standard)
-NORM_MEAN = [0.485, 0.456, 0.406]
-NORM_STD = [0.229, 0.224, 0.225]
-
-# API Configuration
+# API
 GROK_API_URL = "https://api.x.ai/v1/chat/completions"
 GROK_MODEL_NAME = "grok-4-fast-non-reasoning"
-```
 
-### RAG Medical URLs
-Configure medical knowledge sources in the application initialization:
-
-```python
-medical_urls = [
-    "https://www.mayoclinic.org/diseases-conditions/pneumonia/symptoms-causes/syc-20354204",
+# Medical knowledge sources
+MEDICAL_URLS = [
+    "https://www.mayoclinic.org/diseases-conditions/pneumonia/...",
     "https://medlineplus.gov/pneumonia.html",
     "https://www.cdc.gov/pneumonia/index.html",
-    "https://my.clevelandclinic.org/health/diseases/4471-pneumonia",
-    # Add more URLs as needed
+    # ...
 ]
 ```
 
@@ -216,142 +143,64 @@ medical_urls = [
 
 ## Usage
 
-### Running the Application
-
 ```bash
 python run.py
 ```
 
-### Step-by-Step Workflow
-
-#### 1. **Load X-Ray Image**
-   - Click "Browse X-ray Image"
-   - Select a chest X-ray image (JPEG, PNG)
-   - Image preview will display in the GUI
-
-#### 2. **Run AI Analysis**
-   - Click "Run AI Analysis"
-   - System will:
-     - Preprocess the image
-     - Run ResNet50 classification
-     - Generate Grad-CAM heatmap
-     - Compute image features
-     - Display prediction with confidence score
-
-#### 3. **View Analysis**
-   - **Prediction**: "Normal" or "Pneumonia"
-   - **Confidence**: 0-100% certainty
-   - **Image Features**: Quantified metrics
-   - **Heatmap**: Visual attention regions (if available)
-
-#### 4. **Get AI Interpretation**
-   - Click "Get Detailed AI Interpretation"
-   - System retrieves medical knowledge (RAG)
-   - Grok API provides comprehensive analysis including:
-     - Clinical interpretation
-     - Differential diagnoses
-     - Recommended next steps
-     - Medical citations
-
-#### 5. **Ask Follow-up Questions**
-   - Use "Ask AI Agent" text box
-   - Ask specific questions about the findings
-   - Receive evidence-based responses
-
-#### 6. **Generate PDF Report**
-   - Click "Generate PDF Report"
-   - System creates comprehensive report with:
-     - Full analysis
-     - Heatmap visualization
-     - Clinical recommendations
-     - Medical disclaimers
----
-
-## Technologies & Dependencies
-
-### Core Deep Learning
-- **PyTorch**: Deep learning framework
-- **TorchVision**: Pre-trained models and image utilities
-- **ResNet50**: Convolutional neural network architecture
-
-### NLP & RAG
-- **Sentence-Transformers**: Semantic text embeddings (all-MiniLM-L6-v2)
-- **FAISS**: Efficient similarity search and clustering
-- **BeautifulSoup4**: Web scraping for medical knowledge
-
-### Visualization
-- **Matplotlib**: Chart and heatmap rendering
-- **PIL/Pillow**: Image processing
-- **OpenCV**: Advanced image operations
-
-### UI & Reporting
-- **TKinter**: Desktop GUI framework
-- **FPDF2**: PDF report generation
-
-### APIs
-- **Grok API**: AI-powered medical consultation
-- **Requests**: HTTP client for web requests
-
-### Utilities
-- **NumPy**: Numerical computing
-- **Python-dotenv**: Environment variable management
+### Workflow
+1. **Load Image**: Browse and select chest X-ray (JPEG/PNG)
+2. **Run Analysis**: Click "Run AI Analysis" for classification + Grad-CAM
+3. **View Results**: See prediction, confidence, features, and heatmap
+4. **AI Interpretation**: Click "Get AI Interpretation" for detailed analysis
+5. **Ask Questions**: Use chat for follow-up queries
+6. **Generate Report**: Export comprehensive PDF report
 
 ---
+
+## Technologies
+
+| Category | Technologies |
+|----------|-------------|
+| Deep Learning | PyTorch, TorchVision, ResNet50 |
+| NLP/RAG | Sentence-Transformers, FAISS, BeautifulSoup |
+| Visualization | Matplotlib, PIL, OpenCV |
+| UI/Reporting | TKinter, FPDF2 |
+| APIs | Grok API, Requests |
+
+---
+
 ## Model Details
 
 ### Architecture
-- **Base Model**: ResNet50 (pre-trained on ImageNet)
-- **Custom Classifier**: 
-  - Dropout layer (0.5) for regularization
-  - Fully connected layer (2048 → 2 classes)
-- **Input Size**: 224×224 pixels
-- **Output**: 2-class probability distribution
+- **Base**: ResNet50 (ImageNet pre-trained)
+- **Classifier**: Dropout(0.5) → Linear(2048→2)
+- **Input**: 224×224 pixels
 
-### Training Data
-- Trained on pneumonia X-ray datasets
-- Classes: Normal vs. Pneumonia
-- Data augmentation: Rotation, flipping, normalization
+### Performance
+- Accuracy: ~95%
+- Sensitivity: ~90-95%
+- Specificity: ~85-90%
 
-### Performance Metrics
-- **Sensitivity**: ~90-95% (detects pneumonia cases)
-- **Specificity**: ~85-90% (correctly identifies normal cases)
-- **Accuracy**: ~88-93% overall
-
-### Grad-CAM Implementation
-Gradient-weighted Class Activation Mapping highlights regions driving predictions:
-- Extracts feature maps from final conv layer
-- Computes gradients w.r.t. predicted class
-- Generates spatial heatmap showing model attention
+### Grad-CAM
+Highlights regions driving predictions by computing gradients from the final convolutional layer.
 
 ---
 
-## Limitations & Disclaimer
+## Limitations
 
-### ⚠️ Important Disclaimer
-**This AI system is a supplementary diagnostic tool and NOT a substitute for professional medical evaluation by qualified healthcare providers.**
+### Clinical
+- No physical examination capability
+- Dependent on X-ray image quality
+- No access to patient history/symptoms
+- ~5-10% error rate possible
 
-### Clinical Limitations
-1. **No Physical Examination**: AI cannot perform patient assessment
-2. **Image Quality Dependency**: Results affected by X-ray quality, positioning, artifacts
-3. **Limited Context**: No access to patient history, symptoms, lab results
-4. **Dataset Bias**: Model trained on specific datasets; may underperform on underrepresented populations
-5. **False Positives/Negatives**: ~5-10% error rate in real-world scenarios
+### Technical
+- Resolution and artifact sensitivity
+- Limited to X-ray modality
+- Dataset bias potential
 
-### Technical Limitations
-1. **Resolution Sensitivity**: Performance may vary with image resolution
-2. **Artifact Vulnerability**: Medical devices, implants, positioning artifacts can affect accuracy
-3. **Rare Pathologies**: Less accurate for atypical or rare pneumonia presentations
-4. **Single Modality**: Uses only X-ray; CT, labs, and symptoms provide additional context
-
-### Regulatory Status
-- **Not FDA-Approved** for standalone diagnosis
-- **For Research & Adjunctive Use** only
-- **Requires Human Oversight**: All findings must be reviewed by qualified professionals
-
-### Ethical Considerations
-- Use transparently with patients
-- Always involve qualified radiologists
-- Maintain human responsibility for diagnostic decisions
-- Ensure data privacy and HIPAA compliance
-
+### Others
+- Interest use only
+- Model may not be the best to use
+- RAG sources may not be trusted, no reliable knowledge base and keep updating
 ---
